@@ -1,0 +1,117 @@
+---
+title: "Midterm Presentation"
+author: "Julia Burek (jeb5pb)"
+date: "Due Date: 11:59pm, Oct 4"
+output:
+  html_document:
+    number_sections: yes
+    toc: yes
+    toc_float: yes
+    code_folding: show
+  pdf_document:
+    toc: yes
+---
+
+<style>
+h1.title {
+  font-size: 30px;
+}
+h1 {
+  font-size: 26px;
+}
+h2 {
+  font-size: 22px;
+}
+h3 { 
+  font-size: 18px;
+}
+
+</style>
+
+For the midterm proposal, briefly describe your topic along with both an article/report/blog and a dataset. *Submit both `.Rmd` and "knitted"`.html` files*
+
+# Article
+The article can be found [here](https://medium.com/@awghatevaibhavi/where-it-pays-to-attend-college-a7c839c8e2d1).
+
+Title: "Where it Pays to Attend College"
+
+# Data
+The dataset can be found [here](https://www.kaggle.com/wsj/college-salaries).
+
+## Data Summary
+This dataset contains data on different salaries based on school type (State, Liberal Arts, Party, Engineering, Ivy League). The columns include: School Name, School Type, Starting Median Salary, Mid-Career Median Salary, Mid-Career 10th Percentile Salary, Mid-Career 25th Percentile Salary, Mid-Career 75th Percentile Salary, and Mid-Career 90th Percentile Salary. The data from Kaggle also contains datasets on Salaries for Colleges by Region and Degrees that Pay you Back, which the article explores in addition to Salaries for Colleges by Type. These datasets are orginially from The Wall Street Journal. The article used visualization techniques to demonstrate what type of schools and regions have the highest starting salaries. The article also explores what degrees have the highest starting salaries. For the purposes of my project, I will only be exploring the data on Salaries for Colleges by Type. The article's visualizations demonstrate that all Engineering School students get higher starting salaries in almost every region, except for Northeastern region where Ivy League school students get higher starting salaries. For Liberal Arts schools, students from those schools get lower starting salaries. Because the article explored starting salaries, I would like to look into Mid-Career Median Salaries to see if these trends are the same for the various School Types.
+
+## Why I Chose This Article
+The main reason I chose this article and data to explore is because of its relevancy to me as a student. The University of Virginia has consistently been ranked one of the top public schools in the nation as well as consistently ranked high in value. One of the main reasons I chose to come to UVA was because of the opportunities I knew it could offer me when seeking employment after graduation. As a student, deciding which college to attend is a very important decision. Most students want as much value from their college as possible. Most students want to know how much alumni make on average. This can encourage a student to pursue a certain college or degree. As a fourth year student, I am starting to plan for my future career and determine what kind of starting salary I hope to attain. For these reasons, I thought this dataset was very relevant to myself as well as other students interested in the kind of value their college offers.
+
+```{r}
+# Load in Packages and Print first 6 rows of dataset
+library(kableExtra)
+library(tidyverse)
+library(readr)
+library(plotly)
+college <- read_csv("salaries-by-college-type.csv")
+head(college)
+```
+
+
+# Data Validation
+There are some missing values for the Mid-Career 10th Percentile Salary and Mid-Career 90th Percentile Salary columns. For the purposes of my project, I will focus on Starting Median Salary and Mid-Career Median Salary, so I will drop the other columns.
+```{r}
+data <- subset(college, select = -c(`Mid-Career 10th Percentile Salary`,`Mid-Career 25th Percentile Salary`,`Mid-Career 75th Percentile Salary`, `Mid-Career 90th Percentile Salary`))
+```
+
+
+All of the data types are character, so I will change salaries to numeric type. This way it will be easier to calculate average Mid-Career Median Salary by School Type. I also will get rid of the $, so the averages can be calculated more easily. For my plots, I will add the $ back to the x and y values to clearly show the values are salaries. 
+```{r}
+data$`Starting Median Salary` <- as.numeric(gsub('[$,]', '', data$`Starting Median Salary`))
+data$`Mid-Career Median Salary` <- as.numeric(gsub('[$,]', '', data$`Mid-Career Median Salary`))
+```
+
+
+There are some duplicates for college names in the dataset. There are 249 colleges in the dataset, but 269 rows. This is due to the fact that some schools are specified by two different types of schools. For example, some schools are counted twice in the dataset as a State school and a Party school. For the purposes of my project, I will leave these duplicates as it would be helpful to have these schools impact the average Mid-Career Median Salary for both school types.
+```{r}
+summary(data)
+length(unique(data$`School Name`))
+```
+
+    
+# Plot 
+I want to create a barplot of Average Mid-Career Median Salary by School Type. I want to demonstrate what School Type has the highest Average Mid-Career Median Salary and determine if School Type has a large impact on Mid-Career Median Salary. I predict that Ivy League School Types and Engineering School Types would have the highest Mid-Career Median Salary. In addition, I thought a boxplot of Mid-Career Median Salary by School Type could also be informative.
+
+## Boxplot
+```{r}
+box <- ggplot(data, aes(x = `Mid-Career Median Salary`, fill=`School Type`)) + geom_boxplot() + theme_bw() + labs(x='Mid-Career Median Salary', title='Mid-Career Median Salary by School Type') + theme(plot.title=element_text(hjust = 0.5)) + scale_fill_discrete(name="School Type") + scale_x_continuous(labels=scales::dollar_format()) + theme(axis.text.y=element_blank(), axis.ticks.y=element_blank())
+box
+```
+
+Based on this boxplot, it is clear that the School Type Ivy League has the highest Mid-Career Median Salary compared to other School Types. Engineering School Type has the second highest Mid-Career Median Salary. State School Type has the lowest Mid-Career Median Salary, but also contains outliers. This means State School Type has a large amount of variance in Mid-Career Median Salary. The medians for Liberal Arts, Party, and State schools seem to be around the same value. 
+
+## Barplot
+```{r}
+# Find the average mid-career median salary by school type and format into a table
+averages <- data %>%
+  group_by(`School Type`) %>%
+  summarize(`Mid-Career Median Salary` = mean(`Mid-Career Median Salary`))
+averages %>%
+  kbl() %>%
+  kable_styling()
+avg <- ggplot(averages, aes(x=`School Type`, y=`Mid-Career Median Salary`, fill=`School Type`)) + geom_bar(stat='identity', position='dodge') + labs(title=' Average Mid-Career Median Salary by School Type', y = 'Average Mid-Career Median Salary') + theme(legend.position='None') + theme(plot.title=element_text(hjust = 0.5)) + scale_y_continuous(labels=scales::dollar_format())
+
+plot <- ggplotly(avg) 
+plot <- plot %>% layout(showlegend = FALSE)
+plot
+```
+Based on the barplot I created, it is clear that the Ivy League school type has the highest average mid-career median salary with a value of $120,125.00. Engineering schools have the second highest average mid-career median salary with a value of $103,842.11. Liberal Arts, Party, and State school types all have similar averages with $89,378.72, $84,685.00, and $78,567.43 respectively. Based on this graph, Liberal Arts schools have a higher average mid-career median salary than Party and State schools. For the most part the results of my analysis and plot are similar to those in the article. The main difference is that according to the article, Liberal Arts schools get lower starting salaries compared to other school types. My plot demonstrates that Liberal Arts school students have higher average mid-career median salaries than Party and State schools. Overall, the article's conclusion that students from Ivy League and Engineering schools have higher salaries is supported by the results of my analysis and plots. The results of my plots are interesting, but not very surprising. Because of knowledge from the article as well as general knowledge about different school types, I expected Ivy League and Engineering School Types to have the highest average mid-career median salaries. One thing that did surprise me was that the Party school type had a higher average salary than the State school type. Because there was some double counting between Party and State schools, as well as less Party schools overall, this could have had an impact on the results. I also could not find information on what deems a school a "Party" school type, so I think the State school type is a more informative variable when comparing school types and salaries.
+
+
+Out of curiosity, I wanted to see the information about the University of Virginia in the dataset. The starting median salary is $52,700 and the mid-career median salary is $103,000. 
+```{r}
+uva <- subset(data, `School Name` == 'University of Virginia (UVA)')
+
+uva %>%
+  kbl() %>%
+  kable_styling()
+```
+
+
